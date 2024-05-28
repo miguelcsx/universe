@@ -27,7 +27,7 @@ class Manager {
         static bool is_down_pressed(GLFWwindow* window);
 
         // Functions for mouse events
-        static void get_mouse_position(GLFWwindow* window, double* x, double* y);
+        static void get_mouse_position(GLFWwindow* window, double& x, double& y);
         static bool is_key_mouse_pressed(GLFWwindow* window);
         static bool is_key_set_pressed(GLFWwindow* window);
 

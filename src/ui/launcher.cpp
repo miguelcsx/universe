@@ -18,6 +18,12 @@
 #include "../include/graphics/manager.hpp"
 #include "../include/scene/scene.hpp"
 
+#define GL_SILENCE_DEPRECATION
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+#include <GLES2/gl2.h>
+#endif
+
+
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
 #endif
@@ -40,7 +46,7 @@ Launcher::Launcher() {
     
     // Set OpenGL version
     #if defined(__EMSCRIPTEN__)
-        const char* glsl_version = "#version 330 core";
+        const char* glsl_version = "#version 300 es";
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
         glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
@@ -60,8 +66,8 @@ Launcher::Launcher() {
         display_height = window_height;
     #endif
 
-    std::string title = "N-Body Simulation";
-    title += " (U - Toggle UI)";
+    std::string title = TITLE.data();
+    title = title + " - " + VERSION.data();
     window = glfwCreateWindow(window_width, window_height, title.c_str(), nullptr, nullptr);
 
     if (window == nullptr) {
@@ -77,12 +83,12 @@ Launcher::Launcher() {
     glfwSetKeyCallback(window, Manager::key_callback);
 
     #ifdef __EMSCRIPTEN__
-        if (gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(emscripten_GetProcAddress)) == 0) {
+        if (gladLoadGLES2Loader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)) == 0) {
             std::cerr << "Failed to initialize OpenGL ES" << std::endl;
             exit(EXIT_FAILURE);
         }
     #else
-        if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
+        if (gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)) == 0) {
             std::cerr << "Failed to initialize OpenGL context" << std::endl;
             exit(EXIT_FAILURE);
         }
@@ -102,7 +108,7 @@ Launcher::Launcher() {
     ImGui::StyleColorsDark();
 
     ImGuiStyle& style = ImGui::GetStyle();
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+    if ((io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) != 0) {
         style.WindowRounding = 0.0f;
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
@@ -112,9 +118,9 @@ Launcher::Launcher() {
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     #ifdef __EMSCRIPTEN__
-        emscripten_set_touchstart_callback("#canvas", this, true, Manager::touch_start_callback);
-        emscripten_set_touchend_callback("#canvas", this, true, Manager::touch_end_callback);
-        emscripten_set_touchmove_callback("#canvas", this, true, Manager::touch_move_callback);
+        emscripten_set_touchstart_callback("#canvas", (void*)&Manager::drag_data, true, Manager::touch_start_callback);
+        emscripten_set_touchend_callback("#canvas", (void*)&Manager::drag_data, true, Manager::touch_end_callback);
+        emscripten_set_touchmove_callback("#canvas", (void*)&Manager::drag_data, true, Manager::touch_move_callback);
     #endif
 
     #ifndef __EMSCRIPTEN__
@@ -131,6 +137,13 @@ Launcher::Launcher() {
     #ifndef __EMSCRIPTEN__
         glPointSize(point_size);
     #endif
+
+    std::cout << "GL Vendor: " << get_gl_vendor() << std::endl;
+    std::cout << "GL Version: " << get_gl_version() << std::endl;
+    std::cout << "GLSL Version: " << get_glsl_version() << std::endl;
+    std::cout << "GLFW Version: " << get_glfw_version() << std::endl;
+    std::cout << "GLAD Version: " << get_glad_version() << std::endl;
+    std::cout << "ImGui Version: " << get_imgui_version() << std::endl;
 
 }
 
@@ -159,7 +172,7 @@ void Launcher::start() {
     #endif
     {
         std::chrono::high_resolution_clock::time_point current_time = std::chrono::high_resolution_clock::now();
-        delta_time = std::chrono::duration<float, std::chrono::seconds::period>(current_time - last_time).count();
+        delta_time = std::chrono::duration<float>(current_time - last_time).count();
         auto start_time = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now());
 
         handle_input();
@@ -167,8 +180,8 @@ void Launcher::start() {
         handle_ui(delta_time);
         update_screen();
 
-        std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
-        auto delay = std::chrono::duration<float, std::chrono::seconds::period>(end_time - start_time).count();
+        auto  end_time = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now());
+        auto delay = delta_time - std::chrono::duration_cast<std::chrono::duration<float>>(end_time - start_time).count();
         if (delay > 0.0f) {
             std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(delay * 1000.0f)));
         }
@@ -176,7 +189,7 @@ void Launcher::start() {
         last_time = current_time;
     }
     #ifdef __EMSCRIPTEN__
-        EMSCRIPTEN_MAIN_LOOP_END
+        EMSCRIPTEN_MAIN_LOOP_END;
     #endif
 
     scene.reset();
@@ -217,7 +230,7 @@ void Launcher::handle_input() {
         mouse_y = Manager::drag_data.y;
     } else {
     #endif
-        Manager::get_mouse_position(window, &mouse_x, &mouse_y);
+        Manager::get_mouse_position(window, mouse_x, mouse_y);
     #ifdef __EMSCRIPTEN__
     }
     #endif
@@ -239,16 +252,130 @@ void Launcher::handle_ui(float delta_time) {
 
     if (ui) {
         {
-        ImGui::Begin("Controls", &ui);
-        ImGui::Text("WASD - Move Camera");
-        ImGui::Text("Mouse - Rotate Camera");
-        ImGui::Text("Right Mouse - Drag Camera");
-        ImGui::Text("Scroll Wheel - Zoom Camera");
-        ImGui::Text("Space - Pause Simulation");
-        ImGui::Text("R - Reset Simulation");
-        ImGui::Text("F11 - Toggle Fullscreen");
-        ImGui::End();
+            ImGui::Begin("Information");
+            ImGui::Text("Author: %s", AUTHOR.data());
+            ImGui::Text("Project: %s", TITLE.data());
+            ImGui::Text("%.3f ms/frame (%1.f fps)", delta_time, 1.0f / delta_time);
+            ImGui::Text("Window width: %d", display_width);
+            ImGui::Text("Window height: %d", display_height);
+            ImGui::Text("OpenGl Version: %s", get_gl_version().data());
+            ImGui::End();
         }
+        /*
+        {
+            ImGui::Begin("Controls", &ui);
+            ImGui::Text("WASD - Move Camera");
+            ImGui::Text("Mouse - Rotate Camera");
+            ImGui::Text("Right Mouse - Drag Camera");
+            ImGui::Text("Scroll Wheel - Zoom Camera");
+            ImGui::Text("Space - Pause Simulation");
+            ImGui::Text("R - Reset Simulation");
+            ImGui::Text("F11 - Toggle Fullscreen");
+            ImGui::End();
+        }
+        */
+       {
+            ImGui::Begin("Camera settings");
+            
+            // Camera position
+            ImGui::Text("Position: ");
+            ImGui::DragFloat3("##position", reinterpret_cast<float*>(&scene->camera.position));
+            // Reset camera position
+            ImGui::Text("Reset position: ");
+            ImGui::DragFloat3("##reset_position", reinterpret_cast<float*>(&scene->camera.initial_position));
+            ImGui::Button("Reset");
+            if (ImGui::IsItemClicked()) {
+                scene->camera.reset();
+            }
+            ImGui::NewLine();
+
+            // Pitch
+            ImGui::Text("Pitch: ");
+            ImGui::Checkbox("Pitch constrained", &scene->camera.constrain_pitch);
+            ImGui::DragFloat("##pitch", &scene->camera.pitch);
+            // Yaw
+            ImGui::Text("Yaw: ");
+            ImGui::DragFloat("##yaw", &scene->camera.yaw);
+
+            ImGui::NewLine();
+
+            // Field of view
+            ImGui::Text("Field of view: ");
+            ImGui::DragFloat("##fov", &scene->camera.field_of_view, 0.1f, 1.0f, 180.0f);
+
+            ImGui::NewLine();
+
+            // Near plane
+            ImGui::Text("Near plane: ");
+            ImGui::DragFloat("##near_plane", &scene->camera.near_plane, 0.1f);
+            // Far plane
+            ImGui::Text("Far plane: ");
+            ImGui::DragFloat("##far_plane", &scene->camera.far_plane, 0.1f);
+            
+            ImGui::NewLine();
+
+            // Camera speed
+            ImGui::Text("Speed: ");
+            ImGui::DragFloat("##speed", &scene->camera.movement_speed);
+
+            // Sensitivity
+            ImGui::Text("Sensitivity: ");
+            ImGui::DragFloat("##sensitivity", &scene->camera.rotation_speed, 0.1f);
+
+            ImGui::End();
+       }
+       {
+            ImGui::Begin("Simulator settings");
+            ImGui::Text("Start Simulation");
+            #ifndef __EMSCRIPTEN__
+            ImGui::Selectable("start##barnes_hut");
+            if (ImGui::IsItemClicked()) {
+                scene->simulate();
+            }
+            #endif
+
+            ImGui::NewLine();
+            
+            ImGui::Text("Body count: ");
+            static int body_count = static_cast<int>(scene->n_body->get_body_count());
+            ImGui::DragInt("##body_count", &body_count, 1, 1, MAX_BODY_COUNT);
+            ImGui::Button("Validate##body_count_setter");
+            if (ImGui::IsItemClicked()) {
+                scene->n_body->set_body_count(body_count);
+            }
+            
+            ImGui::NewLine();
+
+            ImGui::Text("Reset Simulation");
+            ImGui::Button("Reset##reset_btn");
+            if (ImGui::IsItemClicked()) {
+                reset();
+            }
+
+            ImGui::NewLine();
+
+            ImGui::Text("Pause Simulation");
+            ImGui::Button(scene->is_paused() ? "Resume##pause_btn" : "Pause##pause_btn");
+            if (ImGui::IsItemClicked()) {
+                toggle_pause();
+            }
+
+            ImGui::NewLine();
+
+            #ifndef __EMSCRIPTEN__
+            ImGui::Text("Point size: ");
+            ImGui::DragFloat("##point_size", &point_size, 0.1f, 1.0f, 100.0f);
+            ImGui::Button("Validate##point_size_setter");
+            if (ImGui::IsItemClicked()) {
+                glPointSize(point_size);
+            }
+            #endif
+
+            ImGui::NewLine();
+
+
+            ImGui::End();
+       }
     }
     ImGui::Render();
 }
@@ -314,13 +441,14 @@ void Launcher::toggle_fullscreen() {
             display_width = window_width;
             display_height = window_height;
             glfwGetWindowPos(window, &window_pos_x, &window_pos_y);
-            fullscreen = true;
+            fullscreen = false;
         }
         else {
             glfwGetWindowPos(window, &window_pos_x, &window_pos_y);
             GLFWmonitor* monitor = glfwGetPrimaryMonitor();
             const GLFWvidmode* mode = glfwGetVideoMode(monitor);
             glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, GLFW_DONT_CARE);
+            fullscreen = true;
         }
     #endif
 }

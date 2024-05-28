@@ -42,9 +42,11 @@ bool Scene::is_paused() const {
     return paused;
 }
 
+#ifndef __EMSCRIPTEN__
 void Scene::simulate() {
     if (n_body != nullptr) {
         delete n_body;
     }
-    n_body = new BarnesHut(10000);
+    n_body = new BarnesHut(1000);
 }
+#endif

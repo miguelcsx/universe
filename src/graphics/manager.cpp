@@ -79,7 +79,7 @@ bool Manager::is_key_set_pressed(GLFWwindow* window) {
     return glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
 }
 
-void Manager::get_mouse_position(GLFWwindow* window, double* x, double* y) {
+void Manager::get_mouse_position(GLFWwindow* window, double& x, double& y) {
     glfwGetCursorPos(window, x, y);
 }
 

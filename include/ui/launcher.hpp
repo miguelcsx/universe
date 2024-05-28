@@ -15,32 +15,32 @@ class GLFWwindow;
 
 class Launcher {
     public:
-    static constexpr std::string_view WINDOW_TITLE = "N-Body Simulation";
-    static constexpr std::string_view VERSION = "1.0.0";
-    static constexpr std::string_view PROJECT_URL = "https://github.com/miguelcsx/universe.git";
-    static constexpr std::string_view AUTHOR = "Miguel Cárdenas";
+        static constexpr std::string_view TITLE = "N-Body Simulation";
+        static constexpr std::string_view VERSION = "1.0.0";
+        static constexpr std::string_view PROJECT_URL = "https://github.com/miguelcsx/universe.git";
+        static constexpr std::string_view AUTHOR = "Miguel Cárdenas";
 
-    Launcher();
-    Launcher(const Launcher&) = delete;
-    Launcher(Launcher&&) = delete;
-    Launcher& operator=(const Launcher&) = delete;
-    Launcher& operator=(Launcher&&) = delete;
-    ~Launcher();
+        Launcher();
+        Launcher(const Launcher&) = delete;
+        Launcher(Launcher&&) = delete;
+        Launcher& operator=(const Launcher&) = delete;
+        Launcher& operator=(Launcher&&) = delete;
+        ~Launcher();
 
-    void start();
-    void handle_input();
-    void handle_ui(float delta_time);
-    void update_game(float delta_time);
-    void update_screen();
-    void reset();
-    void toggle_pause();
-    void update_viewport();
-    void center_window();
-    void toggle_fullscreen();
-    void toggle_ui();
-    void clear_screen() const;
+        void start();
+        void handle_input();
+        void handle_ui(float delta_time);
+        void update_game(float delta_time);
+        void update_screen();
+        void reset();
+        void toggle_pause();
+        void update_viewport();
+        void center_window();
+        void toggle_fullscreen();
+        void toggle_ui();
+        void clear_screen() const;
 
-    [[nodiscard]] bool is_minimized() const;
+        [[nodiscard]] bool is_minimized() const;
 
     private:
         GLFWwindow* window;
@@ -64,7 +64,7 @@ class Launcher {
         static constexpr int MAX_BODY_COUNT = 10000000;
 
         #ifndef __EMSCRIPTEN__
-            float point_size = 1.0f;
+            float point_size = 2.0f;
             bool fullscreen = false;
             bool ui = true;
         #else
@@ -78,7 +78,7 @@ class Launcher {
         static std::string_view get_glfw_version();
         static std::string_view get_glad_version();
         static std::string_view get_imgui_version();
-        static std::string_view get_glm_version();
+        // static std::string_view get_glm_version();
 };
 
 #endif // LAUNCHER_HPP
