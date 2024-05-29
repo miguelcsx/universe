@@ -14,9 +14,9 @@ class Camera {
         // Camera attributes
         float movement_speed = 3.0f;
         float rotation_speed = 0.1f;
-        float field_of_view = 45.0f;
+        float field_of_view = 90.0f;
         float near_plane = 0.1f;
-        float far_plane = 100.0f;
+        float far_plane =100.0f;
 
         // Position and rotation of the camera
         float yaw;
@@ -27,7 +27,7 @@ class Camera {
         bool constrain_pitch = true;
         
         glm::vec3 position;
-        glm::vec3 initial_position = glm::vec3(0.0f, 0.0f, 3.0f);
+        glm::vec3 initial_position = glm::vec3(0.0f);
 
         // Movement buffer to take into account the delta time
         glm::vec3 movement_buffer;
@@ -55,8 +55,6 @@ class Camera {
         // Matrix transformations
         glm::mat4 view_matrix;
         glm::mat4 projection_matrix;
-        glm::vec3 camera_front;
-        glm::vec3 camera_right;
         glm::vec3 camera_up = glm::vec3(0.0f, 1.0f, 0.0f);
 
         // void update_camera_vectors();

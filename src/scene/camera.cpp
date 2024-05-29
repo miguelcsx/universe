@@ -21,13 +21,6 @@ void Camera::reset() {
 }
 
 void Camera::update(float delta_time) {
-    // Update the camera front vector
-    // camera_front = glm::normalize(camera_front_buffer);
-    // Update the camera right and up vectors
-    // camera_right = glm::normalize(glm::cross(camera_front, world_up));
-    // camera_up = glm::normalize(glm::cross(camera_right, camera_front));
-    // Update the view matrix
-    // view_matrix = glm::lookAt(position, position + camera_front, camera_up);
     position += movement_buffer * movement_speed * delta_time;
     update_view_matrix();
     movement_buffer = glm::vec3(0.0f);
@@ -49,19 +42,19 @@ void Camera::update_projection_matrix(int display_width, int display_height) {
 }
 
 void Camera::move_forward() {
-    movement_buffer += camera_front;
+    movement_buffer += camera_front_buffer;
 }
 
 void Camera::move_backward() {
-    movement_buffer -= camera_front;
+    movement_buffer -= camera_front_buffer;
 }
 
 void Camera::move_left() {
-    movement_buffer -= camera_right;
+    movement_buffer -= glm::normalize(glm::cross(camera_front_buffer, camera_up));
 }
 
 void Camera::move_right() {
-    movement_buffer += camera_right;
+    movement_buffer += glm::normalize(glm::cross(camera_front_buffer, camera_up));
 }
 
 void Camera::move_up() {
@@ -99,11 +92,9 @@ void Camera::mouse_move(float x_offset, float y_offset) {
         yaw += 360.0f;
     }
 
-    glm::vec3 front;
-    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    front.y = sin(glm::radians(pitch));
-    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    camera_front_buffer = glm::normalize(front);
+    camera_front_buffer.x = static_cast<float>(cos(glm::radians(yaw)) * cos(glm::radians(pitch)));
+    camera_front_buffer.y = static_cast<float>(sin(glm::radians(pitch)));
+    camera_front_buffer.z = static_cast<float>(sin(glm::radians(yaw)) * cos(glm::radians(pitch)));
 }
 
 glm::mat4 Camera::get_view_matrix() const {

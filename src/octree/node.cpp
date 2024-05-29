@@ -3,6 +3,7 @@
  * @file node.cpp
 */
 
+#include <openacc.h>
 #include "../include/octree/node.hpp"
 
 Node::Node(Bound bound, int depth) :
@@ -16,6 +17,7 @@ Node::Node(Bound bound, int depth) :
 
 
 Node::~Node() {
+    #pragma acc parallel loop
     for (Node* child : children) {
         delete child;
     }
@@ -27,13 +29,11 @@ bool Node::insert(Body* body) {
     }
 
     if (is_leaf) {
-        if (bodies.size() < 2) {
+        if (bodies.size() < CAPACITY) {
             bodies.push_back(body);
             return true;
-        } else {
-            subdivide();
-            is_leaf = false;
         }
+        subdivide();
     }
 
     for (Node* child : children) {
@@ -58,6 +58,7 @@ void Node::subdivide() {
     children[6] = new Node(Bound(center + glm::vec3(-half_width, -half_width, half_width), half_width), depth + 1);
     children[7] = new Node(Bound(center + glm::vec3(half_width, -half_width, half_width), half_width), depth + 1);
 
+    #pragma acc parallel loop present(bodies)
     for (Body* body : bodies) {
         for (Node* child : children) {
             child->insert(body);
@@ -72,6 +73,7 @@ void Node::subdivide() {
 
 void Node::calculate_center_of_mass() {
     if (!is_leaf) {
+        #pragma acc parallel loop present(children)
         for (Node* child : children) {
             child->calculate_center_of_mass();
             center_of_mass += child->center_of_mass;
@@ -79,6 +81,7 @@ void Node::calculate_center_of_mass() {
         }
     }
     else if (!bodies.empty()) {
+        #pragma acc parallel loop present(bodies)
         for (Body* body : bodies) {
             center_of_mass += body->position * body->mass;
             total_mass += body->mass;
@@ -101,11 +104,13 @@ void Node::calculate_force(Body& body, float theta, float gravity, const double 
 
     else {
         if (!is_leaf) {
+            #pragma acc parallel loop present(children)
             for (const Node* child : children) {
                 child->calculate_force(body, theta, gravity, softening_factor);
             }
         }
         else {
+            #pragma acc parallel loop present(bodies)
             for (const Body* other : bodies) {
                 if (body.id != other->id) {
                     body.apply_force(other->position, other->mass, gravity, softening_factor);

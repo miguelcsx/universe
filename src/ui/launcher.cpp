@@ -327,12 +327,10 @@ void Launcher::handle_ui(float delta_time) {
        {
             ImGui::Begin("Simulator settings");
             ImGui::Text("Start Simulation");
-            #ifndef __EMSCRIPTEN__
-            ImGui::Selectable("start##barnes_hut");
+            ImGui::Button("Start##start_btn");
             if (ImGui::IsItemClicked()) {
                 scene->simulate();
             }
-            #endif
 
             ImGui::NewLine();
             
@@ -373,6 +371,37 @@ void Launcher::handle_ui(float delta_time) {
 
             ImGui::NewLine();
 
+            ImGui::Text("Spawn position: ");
+            ImGui::DragFloat3("##spawn_position", reinterpret_cast<float*>(&scene->n_body->position));
+
+            ImGui::NewLine();
+
+            ImGui::Text("Radius: ");
+            ImGui::DragFloat("##radius", &scene->n_body->radius, 0.1f, 0.1f, 100.0f);
+
+            ImGui::NewLine();
+
+            ImGui::Text("Body mass: ");
+            ImGui::DragFloat("##body_mass", &scene->n_body->mass, 0.1f, 0.1f, 100.0f);
+
+            ImGui::NewLine();
+
+            ImGui::Text("Gravity: ");
+            ImGui::DragFloat("##gravity", &scene->n_body->gravity, 0.1f, 0.1f, 100.0f);
+
+            ImGui::Text("Softening Factor: ");
+            ImGui::DragFloat("##softening", &scene->n_body->softening_factor, 0.1f, 0.1f, 100.0f);
+
+            ImGui::NewLine();
+
+            ImGui::Text("Damping:");
+            ImGui::DragFloat("##damping", &scene->n_body->damping, 0.0f, 0.0f, 0.1f);
+
+            ImGui::Text("Interaction Percentage: ");
+            ImGui::DragFloat("##interaction_percentage", &scene->n_body->interaction_percentage, 0.0f, 0.0f, 1.0f);
+
+            ImGui::Text("Theta:");
+            ImGui::DragFloat("##theta", &scene->n_body->theta, 0.0f, 0.0f, 1.0f);
 
             ImGui::End();
        }
@@ -467,14 +496,14 @@ bool Launcher::is_minimized() const {
 }
 
 void Launcher::mouse_movement(const double& mouse_x, const double& mouse_y, double& move_x, double& move_y) {
-    static double last_mouse_x = mouse_x;
-    static double last_mouse_y = mouse_y;
+    static double last_x = 0.0f;
+    static double last_y = 0.0f;
 
-    move_x = mouse_x - last_mouse_x;
-    move_y = last_mouse_y - mouse_y;
+    move_x = mouse_x - last_x;
+    move_y = last_y - mouse_y;
 
-    last_mouse_x = mouse_x;
-    last_mouse_y = mouse_y;
+    last_x = mouse_x;
+    last_y = mouse_y;
 }
 
 std::string_view Launcher::get_gl_vendor() {

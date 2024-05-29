@@ -14,12 +14,12 @@
 class NBody {
     public:
         float gravity = 1.0f;
-        float softening_factor = 1.0f;
-        float radius = 2.0f;
-        float theta = 0.5f;
-        float interaction_percentage = 0.5f;
+        float softening_factor = 10.0f;
+        float radius = 3.0f;
+        float theta = 1.0f;
+        float interaction_percentage = 1.0f;
         float damping = 0.995f;
-        float mass = 1.0f;
+        float mass = 1.5f;
 
         glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f);
         glm::vec3 rotation = glm::vec3(0.0f, 0.0f, 0.0f);

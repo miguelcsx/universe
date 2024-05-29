@@ -5,6 +5,7 @@
 
 #include <random>
 #include <iostream>
+#include <openacc.h>
 #include "../include/simulation/barnes_hut.hpp"
 
 const char* const BarnesHut::vertex_shader = 
@@ -71,12 +72,14 @@ BarnesHut::~BarnesHut() {
 void BarnesHut::update(const float& delta_time) {
     Tree octree(Bound(glm::vec3(0.0f), 10.0f));
     // Update the bodies
+    #pragma acc parallel loop
     for (auto& body : bodies) {
         octree.insert(&body);
     }
 
     octree.calculate_center_of_mass();
 
+    #pragma acc parallel loop present(bodies)
     for (auto& body : bodies) {
         octree.calculate_force(body, theta, gravity, softening_factor);
         const glm::vec3 acceleration = body.forces / body.mass;
@@ -118,6 +121,7 @@ void BarnesHut::randomize() {
     std::uniform_real_distribution<float> random_color(0.0f, 1.0f);
 
     // Initialize the bodies
+    #pragma acc parallel loop present(bodies)
     for (auto& body : bodies) {
         const float angle_1 = random_angle(gen);
         const float angle_2 = random_angle(gen);
@@ -142,6 +146,7 @@ size_t BarnesHut::get_body_count() const {
 void BarnesHut::set_body_count(const size_t& body_count) {
     clear();
 
+    #pragma acc parallel loop
     for (int i = 0; i < body_count; i++) {
         bodies.emplace_back(i);
     }
