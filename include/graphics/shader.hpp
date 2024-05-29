@@ -29,7 +29,7 @@ class Shader {
         static void check_compile_errors(unsigned int shader, const std::string& type);
 
         void use() const;
-        unsigned int get_id() const;
+        [[maybe_unused]] [[nodiscard]] unsigned int get_id() const;
 
         [[maybe_unused]] void set_bool(const std::string& name, bool value) const;
         [[maybe_unused]] void set_int(const std::string& name, int value) const;

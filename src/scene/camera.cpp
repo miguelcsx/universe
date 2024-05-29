@@ -18,6 +18,7 @@ void Camera::reset() {
     pitch = initial_pitch;
     position = initial_position;
     mouse_move(0.0f, 0.0f);
+    movement_buffer = glm::vec3(0.0f);
 }
 
 void Camera::update(float delta_time) {
@@ -27,9 +28,10 @@ void Camera::update(float delta_time) {
 }
 
 void Camera::update_view_matrix() {
-    view_matrix = glm::lookAt(position, position + camera_front_buffer, camera_up);
+    view_matrix = glm::lookAt(position, position + glm::normalize(camera_front_buffer), camera_up);
 
 }
+
 
 void Camera::update_projection_matrix(int display_width, int display_height) {
     // Update the projection matrix with the new display size
@@ -42,11 +44,11 @@ void Camera::update_projection_matrix(int display_width, int display_height) {
 }
 
 void Camera::move_forward() {
-    movement_buffer += camera_front_buffer;
+    movement_buffer += glm::normalize(camera_front_buffer);
 }
 
 void Camera::move_backward() {
-    movement_buffer -= camera_front_buffer;
+    movement_buffer -= glm::normalize(camera_front_buffer);
 }
 
 void Camera::move_left() {
@@ -58,43 +60,33 @@ void Camera::move_right() {
 }
 
 void Camera::move_up() {
-    movement_buffer += camera_up;
+    movement_buffer += glm::normalize(camera_up);
 }
 
 void Camera::move_down() {
-    movement_buffer -= camera_up;
+    movement_buffer -= glm::normalize(camera_up);
 }
 
 void Camera::mouse_move(float x_offset, float y_offset) {
     yaw += x_offset * rotation_speed;
     pitch += y_offset * rotation_speed;
+
+    // Clamp the pitch angle
     if (constrain_pitch) {
-        if (pitch > 89.0f) {
-            pitch = 89.0f;
-        }
-        if (pitch < -89.0f) {
-            pitch = -89.0f;
-        }
+        pitch = glm::clamp(pitch, -89.0f, 89.0f);
     }
     else {
-        if (pitch > 360.0f) {
-            pitch -= 360.0f;
-        }
-        if (pitch < -360.0f) {
-            pitch += 360.0f;
-        }
+        pitch = glm::mod(pitch, 360.0f);
     }
 
-    if (yaw > 360.0f) {
-        yaw -= 360.0f;
-    }
-    if (yaw < -360.0f) {
-        yaw += 360.0f;
-    }
+   // Wrap the yaw angle
+   yaw = glm::mod(yaw, 360.0f);
 
     camera_front_buffer.x = static_cast<float>(cos(glm::radians(yaw)) * cos(glm::radians(pitch)));
     camera_front_buffer.y = static_cast<float>(sin(glm::radians(pitch)));
     camera_front_buffer.z = static_cast<float>(sin(glm::radians(yaw)) * cos(glm::radians(pitch)));
+
+    camera_front_buffer = glm::normalize(camera_front_buffer);
 }
 
 glm::mat4 Camera::get_view_matrix() const {

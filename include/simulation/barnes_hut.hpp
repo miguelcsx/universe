@@ -17,7 +17,7 @@ class BarnesHut : public NBody {
     public:
         std::vector<Body> bodies;
 
-        explicit BarnesHut(int bodies = 100000);
+        explicit BarnesHut(int bodies_count = 100000);
         BarnesHut(const BarnesHut&) = delete;
         BarnesHut(BarnesHut&&) = delete;
         BarnesHut& operator=(const BarnesHut&) = delete;

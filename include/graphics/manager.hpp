@@ -28,7 +28,7 @@ class Manager {
 
         // Functions for mouse events
         static void get_mouse_position(GLFWwindow* window, double& x, double& y);
-        static bool is_key_mouse_pressed(GLFWwindow* window);
+        static bool is_key_move_pressed(GLFWwindow* window);
         static bool is_key_set_pressed(GLFWwindow* window);
 
         #ifdef __EMSCRIPTEN__
@@ -38,9 +38,9 @@ class Manager {
             bool is_dragging = false;
         };
         static Manager::DragData drag_data;
-        static EM_BOOL touch_end_callback(int eventType, const EmscriptenTouchEvent* touchEvent, void* userData);
-        static EM_BOOL touch_start_callback(int eventType, const EmscriptenTouchEvent* touchEvent, void* userData);
-        static EM_BOOL touch_move_callback(int eventType, const EmscriptenTouchEvent* touchEvent, void* userData);
+        static EM_BOOL touch_end_callback(int event_type, const EmscriptenTouchEvent* touch_event, void* user_data);
+        static EM_BOOL touch_start_callback(int event_type, const EmscriptenTouchEvent* touch_event, void* user_data);
+        static EM_BOOL touch_move_callback(int event_type, const EmscriptenTouchEvent* touch_event, void* user_data);
         #endif
 };
 

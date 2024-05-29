@@ -27,7 +27,7 @@ struct Node {
         bool insert(Body* body);
         void subdivide();
         void calculate_center_of_mass();
-        void calculate_force(Body& body, float theta, float gravity, const double softening_factor) const;
+        void calculate_force(Body& body, float theta, float gravity, const double softening_factor, float threshold) const;
 
     private:
         std::array<Node*, 8> children;

@@ -41,11 +41,11 @@ class NBody {
         void set_paused(bool paused);
         [[nodiscard]] bool is_paused() const;
 
-        virtual size_t get_body_count() const = 0;
+        [[nodiscard]] virtual size_t get_body_count() const = 0;
         virtual void set_body_count(const size_t& body_count) = 0;
 
     protected:
-        glm::mat4 model_matrix = glm::mat4(1.0f);
+        glm::mat4 model_matrix;
         bool paused = false;
 };
 

@@ -3,23 +3,26 @@
  * @file node.cpp
 */
 
+#include <omp.h>
 #include <openacc.h>
 #include "../include/octree/node.hpp"
 
 Node::Node(Bound bound, int depth) :
-    children({}),
+    children({nullptr}),
     bodies({}),
     bound(bound),
     is_leaf(true),
     depth(depth),
-    center_of_mass(glm::vec3(0.0f)),
+    center_of_mass(),
     total_mass(0.0f) {}
 
 
 Node::~Node() {
-    #pragma acc parallel loop
     for (Node* child : children) {
-        delete child;
+        if (child != nullptr) {
+            delete child;
+        }
+        child = nullptr;
     }
 }
 
@@ -29,15 +32,16 @@ bool Node::insert(Body* body) {
     }
 
     if (is_leaf) {
-        if (bodies.size() < CAPACITY) {
-            bodies.push_back(body);
+        if (this->bodies.size() < CAPACITY || depth >= MAX_DEPTH) {
+            this->bodies.push_back(body);
             return true;
         }
-        subdivide();
+        this->subdivide();
     }
 
-    for (Node* child : children) {
-        if (child->insert(body)) {
+    #pragma acc parallel loop
+    for (int i = 0; i < 8; ++i) {
+        if (children[i]->insert(body)) {
             return true;
         }
     }
@@ -46,22 +50,36 @@ bool Node::insert(Body* body) {
 }
 
 void Node::subdivide() {
-    float half_width = bound.half_width / 2.0f;
-    glm::vec3 center = bound.center;
+    is_leaf = false;
+    float new_half_width = bound.half_width / 2.0f;
+    const auto x = bound.center.x;
+    const auto y = bound.center.y;
+    const auto z = bound.center.z;
 
-    children[0] = new Node(Bound(center + glm::vec3(-half_width, half_width, -half_width), half_width), depth + 1);
-    children[1] = new Node(Bound(center + glm::vec3(half_width, half_width, -half_width), half_width), depth + 1);
-    children[2] = new Node(Bound(center + glm::vec3(-half_width, half_width, half_width), half_width), depth + 1);
-    children[3] = new Node(Bound(center + glm::vec3(half_width, half_width, half_width), half_width), depth + 1);
-    children[4] = new Node(Bound(center + glm::vec3(-half_width, -half_width, -half_width), half_width), depth + 1);
-    children[5] = new Node(Bound(center + glm::vec3(half_width, -half_width, -half_width), half_width), depth + 1);
-    children[6] = new Node(Bound(center + glm::vec3(-half_width, -half_width, half_width), half_width), depth + 1);
-    children[7] = new Node(Bound(center + glm::vec3(half_width, -half_width, half_width), half_width), depth + 1);
+    std::array<glm::vec3, 8> offsets = {
+        glm::vec3(-new_half_width, -new_half_width, -new_half_width),
+        glm::vec3(new_half_width, -new_half_width, -new_half_width),
+        glm::vec3(-new_half_width, new_half_width, -new_half_width),
+        glm::vec3(-new_half_width, -new_half_width, new_half_width),
+        glm::vec3(new_half_width, -new_half_width, new_half_width),
+        glm::vec3(-new_half_width, new_half_width, new_half_width),
+        glm::vec3(new_half_width, new_half_width, -new_half_width),
+        glm::vec3(new_half_width, new_half_width, new_half_width)
+    };
 
-    #pragma acc parallel loop present(bodies)
+    #pragma omp parallel for
+    for (int i = 0; i < 8; ++i) {
+        children[i] = new Node(Bound(glm::vec3(x + offsets[i].x, y + offsets[i].y, z + offsets[i].z), new_half_width), depth + 1);
+    }
+
+    #pragma omp parallel for
     for (Body* body : bodies) {
         for (Node* child : children) {
-            child->insert(body);
+            if(child->bound.contains(*body)) {
+                child->insert(body);
+                break;
+            }
+
         }
     }
 
@@ -72,21 +90,21 @@ void Node::subdivide() {
 
 
 void Node::calculate_center_of_mass() {
-    if (!is_leaf) {
-        #pragma acc parallel loop present(children)
+    if (!this->is_leaf) {
+        #pragma omp parallel for
         for (Node* child : children) {
             child->calculate_center_of_mass();
-            center_of_mass += child->center_of_mass;
-            total_mass += child->total_mass;
+            this->center_of_mass += child->center_of_mass * child->total_mass;
+            this->total_mass += child->total_mass;
         }
     }
-    else if (!bodies.empty()) {
-        #pragma acc parallel loop present(bodies)
-        for (Body* body : bodies) {
-            center_of_mass += body->position * body->mass;
-            total_mass += body->mass;
+    else if (!this->bodies.empty()) {
+        #pragma omp parallel for
+        for (Body* b : bodies) {
+            center_of_mass += b->position * b->mass;
+            total_mass += b->mass;
         }
-        center_of_mass /= bodies.size();
+        this->center_of_mass /= this->bodies.size();
     }
     else {
         center_of_mass = glm::vec3(0.0f);
@@ -94,23 +112,22 @@ void Node::calculate_center_of_mass() {
     }
 }
 
-void Node::calculate_force(Body& body, float theta, float gravity, const double softening_factor) const {
+void Node::calculate_force(Body& body, float theta, float gravity, const double softening_factor, float cutoff_threshold) const {
     const float distance = glm::distance(body.position, bound.center);
     const float size = bound.half_width * 2.0f;
 
-    if (size / distance < theta) {
-        body.apply_force(center_of_mass, total_mass, gravity, softening_factor);
+    if (size / distance < theta || (size / distance) < cutoff_threshold) {
+        body.apply_force(this->bound.center, this->total_mass, gravity, softening_factor);
     }
-
     else {
-        if (!is_leaf) {
-            #pragma acc parallel loop present(children)
+        if (!this->is_leaf) {
+            #pragma omp parallel for
             for (const Node* child : children) {
-                child->calculate_force(body, theta, gravity, softening_factor);
+                child->calculate_force(body, theta, gravity, softening_factor, cutoff_threshold);
             }
         }
         else {
-            #pragma acc parallel loop present(bodies)
+            #pragma omp parallel for
             for (const Body* other : bodies) {
                 if (body.id != other->id) {
                     body.apply_force(other->position, other->mass, gravity, softening_factor);

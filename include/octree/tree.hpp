@@ -12,7 +12,6 @@
 class Tree {
     public:
         explicit Tree(Bound bound);
-        ~Tree();
 
         void insert(Body* body);
         void calculate_center_of_mass();
@@ -20,6 +19,7 @@ class Tree {
 
     private:
         Node root;
+        float cutoff = 0.5f;
 };
 
 #endif // TREE_HPP

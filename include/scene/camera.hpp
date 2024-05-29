@@ -27,7 +27,7 @@ class Camera {
         bool constrain_pitch = true;
         
         glm::vec3 position;
-        glm::vec3 initial_position = glm::vec3(0.0f);
+        glm::vec3 initial_position = glm::vec3(0.0f, 0.0f, 1.0f);
 
         // Movement buffer to take into account the delta time
         glm::vec3 movement_buffer;
@@ -46,10 +46,13 @@ class Camera {
         void move_down();
         void mouse_move(float x_offset, float y_offset);
 
-        glm::mat4 get_view_matrix() const;
-        void update_view_matrix();
-        glm::mat4 get_projection_matrix() const;
+        void zoom_in();
+        void zoom_out();
+
         void update_projection_matrix(int display_width, int display_height);
+        
+        [[nodiscard]] glm::mat4 get_view_matrix() const;
+        [[nodiscard]] glm::mat4 get_projection_matrix() const;
     
     private:
         // Matrix transformations
@@ -58,6 +61,7 @@ class Camera {
         glm::vec3 camera_up = glm::vec3(0.0f, 1.0f, 0.0f);
 
         // void update_camera_vectors();
+        void update_view_matrix();
 
 };
 

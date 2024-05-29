@@ -15,7 +15,7 @@ struct Bound {
 
     Bound(glm::vec3 center, float half_width);
 
-    bool contains(const Body& body) const;
+    [[nodiscard]] bool contains(const Body& body) const;
 };
 
 #endif // BOUND_HPP

@@ -13,7 +13,7 @@
 class Scene {
     public:
         Camera camera;
-        NBody *n_body = nullptr;
+        NBody* n_body = nullptr;
 
         Scene(int width, int height);
         void update(float delta_time);

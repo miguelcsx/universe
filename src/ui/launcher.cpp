@@ -240,7 +240,7 @@ void Launcher::handle_input() {
     mouse_movement(mouse_x, mouse_y, mouse_delta_x, mouse_delta_y);
 
     // Read mouse movement
-    if (Manager::is_key_mouse_pressed(window)) {
+    if (Manager::is_key_move_pressed(window)) {
         scene->camera.mouse_move(static_cast<float>(mouse_delta_x), static_cast<float>(mouse_delta_y));
     }
 }
@@ -261,19 +261,6 @@ void Launcher::handle_ui(float delta_time) {
             ImGui::Text("OpenGl Version: %s", get_gl_version().data());
             ImGui::End();
         }
-        /*
-        {
-            ImGui::Begin("Controls", &ui);
-            ImGui::Text("WASD - Move Camera");
-            ImGui::Text("Mouse - Rotate Camera");
-            ImGui::Text("Right Mouse - Drag Camera");
-            ImGui::Text("Scroll Wheel - Zoom Camera");
-            ImGui::Text("Space - Pause Simulation");
-            ImGui::Text("R - Reset Simulation");
-            ImGui::Text("F11 - Toggle Fullscreen");
-            ImGui::End();
-        }
-        */
        {
             ImGui::Begin("Camera settings");
             
