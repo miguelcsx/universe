@@ -5,7 +5,7 @@
 
 #include <random>
 #include <iostream>
-#include <omp.h>
+#include <openacc.h>
 #include "../include/simulation/barnes_hut.hpp"
 
 const char* const BarnesHut::vertex_shader = 
@@ -74,24 +74,22 @@ BarnesHut::~BarnesHut() {
 void BarnesHut::update(const float& delta_time) {
     Tree octree(Bound(glm::vec3(0.0f), 10.0f));
     // Update the bodies
-    #pragma omp parallel for
+    #pragma acc parallel loop
     for (auto& body : bodies) {
         octree.insert(&body);
     }
 
     octree.calculate_center_of_mass();
 
-    #pragma omp parallel for
+    #pragma acc parallel loop
     for (auto& body : bodies) {
         octree.calculate_force(body, theta, gravity, softening_factor);
         const glm::vec3 acceleration = body.forces / body.mass;
 
         // Apply periodic boundary conditions
-        #pragma omp atomic
-        body.position += body.velocity * delta_time + 0.5f * acceleration * delta_time * delta_time;
-        
-        #pragma omp atomic
+        body.position += body.velocity * delta_time;
         body.velocity += acceleration * delta_time;
+        body.velocity *= damping;
 
         // Reset the forces
         body.forces = glm::vec3(0.0f);
@@ -104,14 +102,14 @@ void BarnesHut::render(glm::mat4 view, glm::mat4 view_projection) {
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
     // Set the vbo data
-    glBufferData(GL_ARRAY_BUFFER, bodies.size() * sizeof(Body), bodies.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizei>(bodies.size() * sizeof(Body)), bodies.data(), GL_DYNAMIC_DRAW);
 
     // Use the shader
     shader.use();
     shader.set_mat4("u_view_projection", view * view_projection);
 
     // Draw the bodies
-    glDrawArrays(GL_POINTS, 0, bodies.size());
+    glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(bodies.size()));
 
     // Unbind the vertex array and buffer
     glBindVertexArray(0);
@@ -128,16 +126,18 @@ void BarnesHut::randomize() {
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> random_angle(0.0f, static_cast<float>(2.0 * M_PI));
     std::uniform_real_distribution<float> random_color(0.0f, 1.0f);
+    std::uniform_int_distribution<int> random_id(0, 100);
 
     // Initialize the bodies
-    #pragma omp parallel for
+    #pragma acc parallel loop
     for (auto& body : bodies) {
-        const float angle_1 = random_angle(gen);
-        const float angle_2 = random_angle(gen);
-        const float x = radius * std::cos(angle_1) * std::sin(angle_2);
-        const float y = radius * std::sin(angle_1) * std::sin(angle_2);
-        const float z = radius * std::cos(angle_2);
-        body.position = glm::vec3(x, y, z) + position;
+        const float phi = random_angle(gen);
+        const float theta = random_angle(gen);
+        int rad = random_id(gen);
+        const float x = rad * std::cos(phi) * std::sin(theta);
+        const float y = rad * std::sin(phi) * std::sin(theta);
+        const float z = rad * std::cos(theta);
+        body.position += glm::vec3(x, y, z); // update position
         body.velocity = glm::vec3(0.0f, 0.0f, 0.0f);
         body.color = glm::vec3(random_color(gen), random_color(gen), random_color(gen));
         body.mass = mass;
@@ -155,7 +155,7 @@ size_t BarnesHut::get_body_count() const {
 void BarnesHut::set_body_count(const size_t& body_count) {
     clear();
 
-    #pragma omp parallel for
+    #pragma acc parallel loop
     for (int i = 0; i < body_count; i++) {
         bodies.emplace_back(i);
     }
