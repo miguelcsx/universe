@@ -19,7 +19,6 @@ class Tree {
 
     private:
         Node root;
-        float cutoff = 0.5f;
 };
 
 #endif // TREE_HPP

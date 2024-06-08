@@ -14,10 +14,10 @@
 
 class NBody {
     public:
-        float gravity = 1.0f;
+        float gravity = 0.04f;
         float softening_factor = 10.0f;
         float radius = 3.0f;
-        float theta = 1.0f;
+        float theta = 0.7f;
         float interaction_percentage = 1.0f;
         float damping = 0.995f;
         float mass = 1.5f;

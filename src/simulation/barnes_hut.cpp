@@ -72,36 +72,42 @@ BarnesHut::~BarnesHut() {
 }
 
 void BarnesHut::update(const float& delta_time) {
+    // Create the octree with appropriate bounds
     Tree octree(Bound(glm::vec3(0.0f), 10.0f));
-    // Update the bodies
-    #pragma acc parallel loop
-    for (auto& body : bodies) {
-        octree.insert(&body);
+
+    const size_t interaction_count = static_cast<size_t>(bodies.size() * interaction_percentage);
+
+    // Update the octree with bodies
+    #pragma acc parallel loop present(bodies, octree)
+    for (size_t i = 0; i < interaction_count; i++) {
+        octree.insert(&bodies[i]);
     }
 
+    // Calculate center of mass for the octree
     octree.calculate_center_of_mass();
 
-    #pragma acc parallel loop
+    // Calculate forces and update positions/velocities for each body
+    #pragma acc parallel loop present(bodies)
     for (auto& body : bodies) {
+        // Calculate forces using the octree
         octree.calculate_force(body, theta, gravity, softening_factor);
+        
+        // Integrate forces to update position and velocity
         const glm::vec3 acceleration = body.forces / body.mass;
-
-        // Apply periodic boundary conditions
-        body.position += body.velocity * delta_time;
+        body.position += body.velocity * delta_time + 0.5f * acceleration * delta_time * delta_time;
         body.velocity += acceleration * delta_time;
         body.velocity *= damping;
-
-        // Reset the forces
-        body.forces = glm::vec3(0.0f);
+        body.forces = glm::vec3(0.0f); // Reset forces for next iteration
     }
 }
+
 
 void BarnesHut::render(glm::mat4 view, glm::mat4 view_projection) {
     // Bind the vertex array and buffer
     glBindVertexArray(vao);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-    // Set the vbo data
+    // Update the VBO data
     glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizei>(bodies.size() * sizeof(Body)), bodies.data(), GL_DYNAMIC_DRAW);
 
     // Use the shader
@@ -121,28 +127,28 @@ void BarnesHut::reset() {
 }
 
 void BarnesHut::randomize() {
-    // Initialize the random number generator
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> random_angle(0.0f, static_cast<float>(2.0 * M_PI));
     std::uniform_real_distribution<float> random_color(0.0f, 1.0f);
-    std::uniform_int_distribution<int> random_id(0, 100);
+    // std::uniform_real_distribution<float> random_radius(0.0f, 10.0f); // Adjust as per your simulation space
 
     // Initialize the bodies
-    #pragma acc parallel loop
+    #pragma acc parallel loop present(bodies)
     for (auto& body : bodies) {
         const float phi = random_angle(gen);
         const float theta = random_angle(gen);
-        int rad = random_id(gen);
-        const float x = rad * std::cos(phi) * std::sin(theta);
-        const float y = rad * std::sin(phi) * std::sin(theta);
-        const float z = rad * std::cos(theta);
-        body.position += glm::vec3(x, y, z); // update position
+        // const float rad = random_radius(gen); // Adjust radius range as per your simulation space
+        const float x = radius * std::cos(phi) * std::sin(theta);
+        const float y = radius * std::sin(phi) * std::sin(theta);
+        const float z = radius * std::cos(theta);
+        body.position = glm::vec3(x, y, z);
         body.velocity = glm::vec3(0.0f, 0.0f, 0.0f);
         body.color = glm::vec3(random_color(gen), random_color(gen), random_color(gen));
         body.mass = mass;
     }
 }
+
 
 void BarnesHut::clear() {
     bodies.clear();

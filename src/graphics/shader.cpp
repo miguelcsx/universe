@@ -151,19 +151,21 @@ void Shader::compile(const char* vertex_source, const char* fragment_source, con
     glAttachShader(id, fragment);
 
     // Transform feedback varyings
-    std::array<const char*, 2> varyings_c;
-    for (int i = 0; i < varyings.size(); i++) {
-        varyings_c[i] = varyings[i].c_str();
+    std::vector<const char*> varyings_c;
+    varyings_c.reserve(varyings.size());
+    for (const auto& varying : varyings) {
+        varyings_c.push_back(varying.c_str());
     }
     glTransformFeedbackVaryings(id, varyings.size(), varyings_c.data(), GL_INTERLEAVED_ATTRIBS);
 
     glLinkProgram(id);
     check_compile_errors(id, "PROGRAM");
 
-    // Delete the shaders as they're linked into our program now and no longer necessary
+    // Delete the shaders after program linkage
     glDeleteShader(vertex);
     glDeleteShader(fragment);
 }
+
 
 void Shader::check_compile_errors(unsigned int shader, const std::string& type) {
     int success;

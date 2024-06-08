@@ -30,105 +30,118 @@ bool Node::insert(Body* body) {
     }
 
     if (is_leaf) {
-        if (this->bodies.size() < CAPACITY || depth >= MAX_DEPTH) {
-            this->bodies.push_back(body);
+        if (bodies.size() < CAPACITY || depth >= MAX_DEPTH) {
+            bodies.push_back(body);
             return true;
         }
-        this->subdivide();
+        subdivide();
     }
 
-    return (
-        children[0]->insert(body) ||
-        children[1]->insert(body) ||
-        children[2]->insert(body) ||
-        children[3]->insert(body) ||
-        children[4]->insert(body) ||
-        children[5]->insert(body) ||
-        children[6]->insert(body) ||
-        children[7]->insert(body)
-    );
+    #pragma acc parallel loop
+    for (auto* child : children) {
+        #pragma acc loop seq
+        for (int i = 0; i < 8; ++i) {
+            if (child->insert(body)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 void Node::subdivide() {
     is_leaf = false;
-    float new_half_width = bound.half_width / 2.0f;
-    const auto x = bound.center.x;
-    const auto y = bound.center.y;
-    const auto z = bound.center.z;
+    float new_half_width = bound.half_width * 0.5f;
+    const auto& center = bound.center;
 
     std::array<glm::vec3, 8> offsets = {
         glm::vec3(-new_half_width, -new_half_width, -new_half_width),
         glm::vec3(new_half_width, -new_half_width, -new_half_width),
         glm::vec3(-new_half_width, new_half_width, -new_half_width),
+        glm::vec3(new_half_width, new_half_width, -new_half_width),
         glm::vec3(-new_half_width, -new_half_width, new_half_width),
         glm::vec3(new_half_width, -new_half_width, new_half_width),
         glm::vec3(-new_half_width, new_half_width, new_half_width),
-        glm::vec3(new_half_width, new_half_width, -new_half_width),
         glm::vec3(new_half_width, new_half_width, new_half_width)
     };
 
     #pragma acc parallel loop
     for (int i = 0; i < 8; ++i) {
-        children[i] = new Node(Bound(glm::vec3(x + offsets[i].x, y + offsets[i].y, z + offsets[i].z), new_half_width), depth + 1);
+        children[i] = new Node(Bound(center + offsets[i], new_half_width), depth + 1);
     }
 
-    #pragma acc parallel loop collapse(2)
-    for (Body* body : bodies) {
-        for (auto* child : children) {
-            child->insert(body);
-        }
-    }
-
+    std::vector<Body*> bodies_to_reinsert = bodies;
     bodies.clear();
 
-    this->is_leaf = false;
+    #pragma acc parallel loop
+    for (Body* body : bodies_to_reinsert) {
+        insert(body);
+    }
 }
 
 
 void Node::calculate_center_of_mass() {
-    if (!this->is_leaf) {
-        #pragma acc parallel loop
+    if (!is_leaf) {
+        center_of_mass = glm::vec3(0.0f);
+        total_mass = 0.0f;
+
+        #pragma acc parallel loop reduction(+:center_of_mass,total_mass)
         for (Node* child : children) {
-            child->calculate_center_of_mass();
-            this->center_of_mass += child->center_of_mass * child->total_mass;
-            this->total_mass += child->total_mass;
+            if (child) {
+                child->calculate_center_of_mass();
+                center_of_mass += child->center_of_mass * child->total_mass;
+                total_mass += child->total_mass;
+            }
         }
-        this->center_of_mass /= this->total_mass;
-    }
-    else if (!this->bodies.empty()) {
-        #pragma acc parallel loop
-        for (Body* b : bodies) {
-            this->total_mass += b->mass;
-            this->center_of_mass += b->position;
+
+        if (total_mass > 0) {
+            center_of_mass /= total_mass;
         }
-        this->center_of_mass /= this->bodies.size();
-    }
-    else {
-        this->center_of_mass = glm::vec3(0.0f);
-        this->total_mass = 0.0f;
+    } else if (!bodies.empty()) {
+        center_of_mass = glm::vec3(0.0f);
+        total_mass = 0.0f;
+
+        #pragma acc parallel loop reduction(+:center_of_mass,total_mass)
+        for (Body* body : bodies) {
+            center_of_mass += body->position * body->mass;
+            total_mass += body->mass;
+        }
+
+        if (total_mass > 0) {
+            center_of_mass /= total_mass;
+        }
+    } else {
+        center_of_mass = glm::vec3(0.0f);
+        total_mass = 0.0f;
     }
 }
 
-void Node::calculate_force(Body& body, float theta, float gravity, const double softening_factor, float cutoff_threshold) const {
-    const float distance = glm::distance(body.position, bound.center);
-    const float size = bound.half_width * 2.0f;
+void Node::calculate_force(Body& body, float theta, float gravity, const double softening_factor) const {
+    glm::vec3 r = center_of_mass - body.position;
+    float distance = glm::length(r);
+    float size = bound.half_width * 2.0f;
+
+    if (is_leaf && bodies.size() == 1 && bodies[0]->id == body.id) {
+        return; // Do not calculate force on itself
+    }
 
     if (size / distance < theta) {
-        body.apply_force(this->bound.center, this->total_mass, gravity, softening_factor);
-    }
-    else {
-        if (!this->is_leaf) {
-            #pragma acc parallel loop
-            for (const Node* child : children) {
-                child->calculate_force(body, theta, gravity, softening_factor, cutoff_threshold);
+        body.apply_force(center_of_mass, total_mass, gravity, softening_factor);
+    } else if (!is_leaf) {
+        #pragma acc parallel loop present(children[:8])
+        for (int i = 0; i < 8; ++i) {
+            Node* child = children[i];
+            if (child) {
+            child->calculate_force(body, theta, gravity, softening_factor);
             }
         }
-        else {
-            #pragma acc parallel loop
-            for (const Body* other : this->bodies) {
-                if (body.id != other->id) {
-                    body.apply_force(other->position, other->mass, gravity, softening_factor);
-                }
+    } else {
+        #pragma acc parallel loop present(bodies[:bodies.size()])
+        for (int i = 0; i < bodies.size(); ++i) {
+            const Body* other = bodies[i];
+            if (body.id != other->id) {
+                body.apply_force(other->position, other->mass, gravity, softening_factor);
             }
         }
     }

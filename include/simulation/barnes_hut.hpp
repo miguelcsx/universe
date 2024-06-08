@@ -15,9 +15,7 @@
 
 class BarnesHut : public NBody {
     public:
-        std::vector<Body> bodies;
-
-        explicit BarnesHut(int bodies_count = 100000);
+        explicit BarnesHut(int bodies_count = 10000);
         BarnesHut(const BarnesHut&) = delete;
         BarnesHut(BarnesHut&&) = delete;
         BarnesHut& operator=(const BarnesHut&) = delete;
@@ -30,10 +28,12 @@ class BarnesHut : public NBody {
         void clear();
         void randomize();
 
-        size_t get_body_count() const final;
+        [[nodiscard]] size_t get_body_count() const final;
         void set_body_count(const size_t& body_count) final;
-    
+
     private:
+        std::vector<Body> bodies;
+
         static const char* const vertex_shader;
         static const char* const fragment_shader;
 

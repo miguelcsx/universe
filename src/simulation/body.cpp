@@ -3,8 +3,9 @@
  * @file body.cpp
 */
 
+#include <iostream>
+#include <glm/gtx/string_cast.hpp>
 #include "../include/simulation/body.hpp"
-
 
 Body::Body(u_int id, float mass, const glm::vec3 position, const glm::vec3 velocity, const glm::vec3 color)
     : id(id), mass(mass), position(position), velocity(velocity), color(color) {}
@@ -13,15 +14,13 @@ Body::Body(u_int id, float mass, const glm::vec3 position, const glm::vec3 veloc
 void Body::apply_force(glm::vec3 new_position, float new_mass, float gravity, float softening) {
     const glm::vec3 r = new_position - position;
     const float r_length = glm::length(r);
-    const float r_squared = r_length * r_length;
+    const float r_squared = r_length * r_length + softening * softening;
 
-    // Prevent division by zero and handle softening
-    const float denom = r_squared;
-    
     // Calculate the gravitational force
-    const float maginitude = (gravity * mass * new_mass) / denom;
+    const float magnitude = (gravity * (mass * new_mass)) / r_squared;
+    const float inv_r_squared = 1.0f / r_squared;
 
-    const glm::vec3 force = maginitude * r;
+    glm::vec3 force = magnitude * r / r_length;
 
     forces += force;
 }

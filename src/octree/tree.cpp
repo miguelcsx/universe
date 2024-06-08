@@ -16,5 +16,5 @@ void Tree::calculate_center_of_mass() {
 }
 
 void Tree::calculate_force(Body& body, float theta, float gravity, const double softening_factor) const {
-    root.calculate_force(body, theta, gravity, softening_factor, cutoff);
+    root.calculate_force(body, theta, gravity, softening_factor);
 }

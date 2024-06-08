@@ -36,7 +36,7 @@ void Camera::update_view_matrix() {
 void Camera::update_projection_matrix(int display_width, int display_height) {
     // Update the projection matrix with the new display size
     projection_matrix = glm::perspective(
-        glm::radians(field_of_view / 2),
+        glm::radians(field_of_view * 0.5f),
         static_cast<float>(display_width) / static_cast<float>(display_height),
         near_plane,
         far_plane
@@ -52,19 +52,19 @@ void Camera::move_backward() {
 }
 
 void Camera::move_left() {
-    movement_buffer -= glm::normalize(glm::cross(camera_front_buffer, camera_up));
+    movement_buffer -= glm::cross(camera_front_buffer, camera_up);
 }
 
 void Camera::move_right() {
-    movement_buffer += glm::normalize(glm::cross(camera_front_buffer, camera_up));
+    movement_buffer += glm::cross(camera_front_buffer, camera_up);
 }
 
 void Camera::move_up() {
-    movement_buffer += glm::normalize(camera_up);
+    movement_buffer += camera_up;
 }
 
 void Camera::move_down() {
-    movement_buffer -= glm::normalize(camera_up);
+    movement_buffer -= camera_up;
 }
 
 void Camera::mouse_move(float x_offset, float y_offset) {
@@ -73,18 +73,21 @@ void Camera::mouse_move(float x_offset, float y_offset) {
 
     // Clamp the pitch angle
     if (constrain_pitch) {
-        pitch = glm::clamp(pitch, -89.0f, 89.0f);
+        pitch = std::max(std::min(pitch, 89.0f), -89.0f);
     }
     else {
-        pitch = glm::mod(pitch, 360.0f);
+        pitch = fmod(pitch, 360.0f);
     }
 
    // Wrap the yaw angle
-   yaw = glm::mod(yaw, 360.0f);
+   yaw = fmod(yaw, 360.0f);
 
-    camera_front_buffer.x = static_cast<float>(cos(glm::radians(yaw)) * cos(glm::radians(pitch)));
-    camera_front_buffer.y = static_cast<float>(sin(glm::radians(pitch)));
-    camera_front_buffer.z = static_cast<float>(sin(glm::radians(yaw)) * cos(glm::radians(pitch)));
+    const float yaw_radians = glm::radians(yaw);
+    const float pitch_radians = glm::radians(pitch);
+
+    camera_front_buffer.x = cos(yaw_radians) * cos(pitch_radians);
+    camera_front_buffer.y = sin(pitch_radians);
+    camera_front_buffer.z = sin(yaw_radians) * cos(pitch_radians);
 
     camera_front_buffer = glm::normalize(camera_front_buffer);
 }
