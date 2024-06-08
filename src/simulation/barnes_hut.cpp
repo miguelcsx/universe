@@ -131,17 +131,17 @@ void BarnesHut::randomize() {
     std::mt19937 gen(rd());
     std::uniform_real_distribution<float> random_angle(0.0f, static_cast<float>(2.0 * M_PI));
     std::uniform_real_distribution<float> random_color(0.0f, 1.0f);
-    // std::uniform_real_distribution<float> random_radius(0.0f, 10.0f); // Adjust as per your simulation space
+    std::uniform_real_distribution<float> random_radius(1.5f, 3.0f); // Adjust as per your simulation space
 
     // Initialize the bodies
     #pragma acc parallel loop present(bodies)
     for (auto& body : bodies) {
         const float phi = random_angle(gen);
         const float theta = random_angle(gen);
-        // const float rad = random_radius(gen); // Adjust radius range as per your simulation space
-        const float x = radius * std::cos(phi) * std::sin(theta);
-        const float y = radius * std::sin(phi) * std::sin(theta);
-        const float z = radius * std::cos(theta);
+        const float rad = random_radius(gen); // Adjust radius range as per your simulation space
+        const float x = rad * std::cos(phi) * std::sin(theta);
+        const float y = rad * std::sin(phi) * std::sin(theta);
+        const float z = rad * std::cos(theta);
         body.position = glm::vec3(x, y, z);
         body.velocity = glm::vec3(0.0f, 0.0f, 0.0f);
         body.color = glm::vec3(random_color(gen), random_color(gen), random_color(gen));
