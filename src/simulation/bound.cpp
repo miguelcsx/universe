@@ -3,7 +3,7 @@
  * @file bound.cpp
 */
 
-#include "../include/simulation/bound.hpp"
+#include "simulation/bound.hpp"
 
 Bound::Bound(glm::vec3 center, float half_width)
     : center(center), half_width(half_width) {}

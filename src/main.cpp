@@ -4,7 +4,7 @@
 */
 
 #include <iostream>
-#include "../include/ui/launcher.hpp"
+#include "ui/launcher.hpp"
 
 int main(void) {
    

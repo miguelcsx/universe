@@ -7,8 +7,8 @@
 #define SCENE_HPP
 
 #include "camera.hpp"
-#include "../include/simulation/n_body.hpp"
-#include "../include/simulation/barnes_hut.hpp"
+#include "simulation/n_body.hpp"
+#include "simulation/barnes_hut.hpp"
 
 class Scene {
     public:

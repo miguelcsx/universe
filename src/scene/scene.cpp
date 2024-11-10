@@ -3,7 +3,7 @@
  * @file scene.cpp
 */
 
-#include "../include/scene/scene.hpp"
+#include "scene/scene.hpp"
 
 Scene::Scene(int width, int height) :
     camera(width, height) {

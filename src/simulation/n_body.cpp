@@ -5,7 +5,7 @@
 
 #include <iostream>
 #include <glm/gtc/matrix_transform.hpp>
-#include "../include/simulation/n_body.hpp"
+#include "simulation/n_body.hpp"
 
 void NBody::update_model_matrix() {
     model_matrix = glm::mat4(1.0f);

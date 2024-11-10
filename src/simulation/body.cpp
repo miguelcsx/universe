@@ -5,7 +5,7 @@
 
 #include <iostream>
 #include <glm/gtx/string_cast.hpp>
-#include "../include/simulation/body.hpp"
+#include "simulation/body.hpp"
 
 Body::Body(u_int id, float mass, const glm::vec3 position, const glm::vec3 velocity, const glm::vec3 color)
     : id(id), mass(mass), position(position), velocity(velocity), color(color) {}

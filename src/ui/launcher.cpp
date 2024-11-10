@@ -10,13 +10,13 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_impl_glfw.h>
-#include <imgui/imgui_impl_opengl3.h>
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
 
-#include "../include/ui/launcher.hpp"
-#include "../include/graphics/manager.hpp"
-#include "../include/scene/scene.hpp"
+#include "ui/launcher.hpp"
+#include "graphics/manager.hpp"
+#include "scene/scene.hpp"
 
 #define GL_SILENCE_DEPRECATION
 #if defined(IMGUI_IMPL_OPENGL_ES2)

@@ -8,7 +8,7 @@
 #include <sstream>
 #include <array>
 #include <glad/glad.h>
-#include "../include/graphics/shader.hpp"
+#include "graphics/shader.hpp"
 
 
 Shader::Shader(const char* vertex_path, const char* fragment_path, bool from_path) {

@@ -3,7 +3,7 @@
  * @file tree.cpp
 */
 
-#include "../include/octree/tree.hpp"
+#include "octree/tree.hpp"
 
 Tree::Tree(Bound bound) : root(bound, 0) {}
 

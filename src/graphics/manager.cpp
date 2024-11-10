@@ -4,8 +4,8 @@
 */
 
 #include <GLFW/glfw3.h>
-#include "../include/graphics/manager.hpp"
-#include "../include/ui/launcher.hpp"
+#include "graphics/manager.hpp"
+#include "ui/launcher.hpp"
 
 void Manager::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     (void)scancode;

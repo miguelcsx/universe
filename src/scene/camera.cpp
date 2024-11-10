@@ -3,7 +3,7 @@
  * @file camera.cpp
 */
 
-#include "../include/scene/camera.hpp"
+#include "scene/camera.hpp"
 
 Camera::Camera(int display_width, int display_height) {
     yaw = initial_yaw;

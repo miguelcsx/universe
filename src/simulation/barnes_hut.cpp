@@ -5,8 +5,8 @@
 
 #include <random>
 #include <iostream>
-#include <openacc.h>
-#include "../include/simulation/barnes_hut.hpp"
+#include <omp.h>
+#include "simulation/barnes_hut.hpp"
 
 const char* const BarnesHut::vertex_shader = 
     R"(
@@ -77,8 +77,8 @@ void BarnesHut::update(const float& delta_time) {
 
     const size_t interaction_count = static_cast<size_t>(bodies.size() * interaction_percentage);
 
-    // Update the octree with bodies
-    #pragma acc parallel loop present(bodies, octree)
+    // Update the octree with bodies using OpenMP
+    #pragma omp parallel for
     for (size_t i = 0; i < interaction_count; i++) {
         octree.insert(&bodies[i]);
     }
@@ -87,7 +87,7 @@ void BarnesHut::update(const float& delta_time) {
     octree.calculate_center_of_mass();
 
     // Calculate forces and update positions/velocities for each body
-    #pragma acc parallel loop present(bodies)
+    #pragma omp parallel for
     for (auto& body : bodies) {
         // Calculate forces using the octree
         octree.calculate_force(body, theta, gravity, softening_factor);
@@ -100,7 +100,6 @@ void BarnesHut::update(const float& delta_time) {
         body.forces = glm::vec3(0.0f); // Reset forces for next iteration
     }
 }
-
 
 void BarnesHut::render(glm::mat4 view, glm::mat4 view_projection) {
     // Bind the vertex array and buffer
@@ -133,9 +132,10 @@ void BarnesHut::randomize() {
     std::uniform_real_distribution<float> random_color(0.0f, 1.0f);
     std::uniform_real_distribution<float> random_radius(1.5f, 3.0f); // Adjust as per your simulation space
 
-    // Initialize the bodies
-    #pragma acc parallel loop present(bodies)
-    for (auto& body : bodies) {
+    // Initialize the bodies using OpenMP
+    #pragma omp parallel for
+    for (size_t i = 0; i < bodies.size(); i++) {
+        auto& body = bodies[i];
         const float phi = random_angle(gen);
         const float theta = random_angle(gen);
         const float rad = random_radius(gen); // Adjust radius range as per your simulation space
@@ -149,7 +149,6 @@ void BarnesHut::randomize() {
     }
 }
 
-
 void BarnesHut::clear() {
     bodies.clear();
 }
@@ -161,7 +160,7 @@ size_t BarnesHut::get_body_count() const {
 void BarnesHut::set_body_count(const size_t& body_count) {
     clear();
 
-    #pragma acc parallel loop
+    #pragma omp parallel for
     for (int i = 0; i < body_count; i++) {
         bodies.emplace_back(i);
     }

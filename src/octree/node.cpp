@@ -4,8 +4,7 @@
 */
 
 #include <omp.h>
-#include <openacc.h>
-#include "../include/octree/node.hpp"
+#include "octree/node.hpp"
 
 Node::Node(Bound bound, int depth) :
     children({}),
